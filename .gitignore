@@ -88,3 +88,9 @@ es_data/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# Claude AI Assistant
+CLAUDE.md
+.claude/
+**/CLAUDE.md
+*.claude.md

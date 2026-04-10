@@ -1,0 +1,42 @@
+{
+      "mappings": {
+          "properties": {
+              
+              "doc_id":        {"type": "keyword"},
+              "source_file":   {"type": "keyword"},
+              "doc_type":      {"type": "keyword"},  
+              "@timestamp":    {"type": "date"},
+              "doc_hash":      {"type": "keyword"},  
+              
+              "page_number":    {"type": "integer"},
+              "section_title":  {"type": "keyword"},
+              "chunk_type":     {"type": "keyword"},  
+              "chunk_index":    {"type": "integer"},  
+
+              
+              "content": {
+                  "type": "text",
+                  "analyzer": "english"              
+              },
+
+              
+              "embedding": {
+                  "type": "dense_vector",
+                  "dims": 1024,
+                  "index": true,
+                  "similarity": "cosine"
+              },
+
+              
+              "thread_id":  {"type": "keyword"},
+              "sender":     {"type": "keyword"},
+              "subject":    {"type": "text"},
+            
+              "access_type":  {"type": "keyword"}
+          }
+      },
+      "settings": {
+          "number_of_shards":   1,    
+          "number_of_replicas": 0   
+      }
+  }
