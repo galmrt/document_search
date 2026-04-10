@@ -50,4 +50,6 @@ async def upload_file(file: UploadFile):
 
 @app.post("/query")
 async def query(query: str):
-    pass
+    query_embedding = embedding_service.encode([query])[0]
+    results = es_service.search(query_embedding, size=5)
+    return {"results": results}

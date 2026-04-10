@@ -39,7 +39,7 @@ class ESService:
             try:
                 response = self.es.index(index=INDEX_NAME, document=doc)
                 indexed_count += 1
-                if i == 0:  # Log first document for debugging
+                if i == 0:
                     self.logger.info(f"First chunk indexed with ID: {response['_id']}")
             except Exception as e:
                 self.logger.error(f"Error indexing chunk {i} for {filename}: {e}")
@@ -47,3 +47,14 @@ class ESService:
 
         self.logger.info(f"Successfully indexed {indexed_count}/{len(chunks)} chunks for {filename}")
         return indexed_count
+    
+    def search(self, query_embedding: list[float], size: int = 5):
+        body = {
+        "field": "embedding",
+        "query_vector": query_embedding,
+        "k": size,
+        "num_candidates": 100
+    }
+    
+        response = self.es.search(index=INDEX_NAME, source=False, fields=["content"], knn=body)
+        return [hit["fields"] for hit in response["hits"]["hits"]]
