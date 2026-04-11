@@ -6,6 +6,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile
 from dotenv import load_dotenv
 
+from docling.document_converter import DocumentConverter
+
 from src.utils.es_service import ESService
 from src.utils.embedding_service import EmbeddingService
 from src.ingestion.pdf_processor import PDFProcessor
@@ -23,7 +25,8 @@ async def lifespan(app: FastAPI):
     es_service = ESService(os.getenv("ELASTICSEARCH_URL", "http://localhost:9200"))
     es_service.ensure_index()
     embedding_service = EmbeddingService()
-    pdf_processor = PDFProcessor(embedding_service)
+    converter = DocumentConverter()
+    pdf_processor = PDFProcessor(converter, embedding_service)
     print("Services started")
     yield
 
