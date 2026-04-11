@@ -83,9 +83,21 @@ If time allows, implement a more advanced chunking strategy:
 - Semantic segmentation: use a model to understand the content and split based on paragraphs, sentences or clauses. 
 
 ## Database setup ##
-In order in the future to be able to make a specified search (emails. vs. docs), elasticsearch is good for having multiple indexes and unstructured data. 
+In order in the future to be able to make a specified search (emails. vs. docs), elasticsearch is good for having multiple indexes and unstructured data.
 
+# 04/10/2026
 
+## Chunking strategy update
+Replaced fixed-size `RecursiveCharacterTextSplitter` with a single-pass semantic chunking approach:
+- Pages are merged into one continuous text with character offset tracking, eliminating hard page-boundary breaks
+- Text is split into paragraphs (`\n\n`), each paragraph embedded once using `BAAI/bge-large-en-v1.5`
+- Semantic breaks detected via cosine similarity between adjacent paragraphs (adaptive 90th-percentile threshold)
+- Chunk embeddings computed by averaging constituent paragraph embeddings — no second embedding pass
+- Page metadata preserved per chunk; cross-page chunks store a list of page numbers
 
+**Trade-off**: variable chunk sizes vs. fixed 500-word chunks. Accepted — topically coherent chunks improve retrieval quality for legal text.
 
-04/09/2026
+## File identity and versioning
+- `file_id`: SHA-256 hash of file bytes. Shared across all chunks of the same file. Used for deduplication — re-uploading identical content is a no-op.
+- `version`: auto-incremented integer per `file_name`. Same filename + different content = new version.
+- `file_name`: original uploaded filename.

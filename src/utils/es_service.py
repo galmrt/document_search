@@ -22,14 +22,28 @@ class ESService:
             self.es.indices.create(index=INDEX_NAME, body=mapping)
             self.logger.info(f"Created index: {INDEX_NAME}")
 
-    def index_chunks(self, filename: str, chunks: list[Document], embeddings: list[list[float]]):
+    def file_exists(self, file_id: str) -> bool:
+        result = self.es.count(index=INDEX_NAME, body={"query": {"term": {"file_id": file_id}}})
+        return result["count"] > 0
+
+    def get_next_version(self, filename: str) -> int:
+        result = self.es.search(index=INDEX_NAME, body={
+            "size": 0,
+            "query": {"term": {"file_name": filename}},
+            "aggs": {"max_version": {"max": {"field": "version"}}}
+        })
+        current = result["aggregations"]["max_version"]["value"]
+        return int(current) + 1 if current else 1
+
+    def index_chunks(self, filename: str, file_id: str, version: int, chunks: list[Document], embeddings: list[list[float]]):
         indexed_count = 0
         for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
             doc = {
-                "doc_id": f"{filename}_{i}",
-                "source_file": filename,
+                "file_id": file_id,
+                "file_name": filename,
                 "doc_type": "pdf",
                 "@timestamp": datetime.now(timezone.utc).isoformat(),
+                "version": version,
                 "page_number": chunk.metadata.get("page_number", 0),
                 "chunk_index": i,
                 "content": chunk.page_content,

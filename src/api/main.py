@@ -1,3 +1,4 @@
+import hashlib
 import os
 import tempfile
 from contextlib import asynccontextmanager
@@ -22,7 +23,7 @@ async def lifespan(app: FastAPI):
     es_service = ESService(os.getenv("ELASTICSEARCH_URL", "http://localhost:9200"))
     es_service.ensure_index()
     embedding_service = EmbeddingService()
-    pdf_processor = PDFProcessor()
+    pdf_processor = PDFProcessor(embedding_service)
     print("Services started")
     yield
 
@@ -33,19 +34,24 @@ app = FastAPI(lifespan=lifespan)
 @app.post("/upload")
 async def upload_file(file: UploadFile):
     contents = await file.read()
+    file_id = hashlib.sha256(contents).hexdigest()
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         tmp.write(contents)
         tmp_path = tmp.name
 
+    if es_service.file_exists(file_id):
+        return {"filename": file.filename, "file_id": file_id, "status": "already_indexed"}
+
+    version = es_service.get_next_version(file.filename)
+
     try:
-        chunks = pdf_processor.get_chunks(tmp_path)
-        embeddings = embedding_service.encode([c.page_content for c in chunks])
-        es_service.index_chunks(file.filename, chunks, embeddings)
+        chunks, embeddings = pdf_processor.get_chunks(tmp_path)
+        es_service.index_chunks(file.filename, file_id, version, chunks, embeddings)
     finally:
         os.unlink(tmp_path)
 
-    return {"filename": file.filename, "chunks_indexed": len(chunks)}
+    return {"filename": file.filename, "file_id": file_id, "version": version, "chunks_indexed": len(chunks)}
 
 
 @app.post("/query")

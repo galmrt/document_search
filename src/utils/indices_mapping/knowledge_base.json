@@ -2,11 +2,11 @@
       "mappings": {
           "properties": {
               
-              "doc_id":        {"type": "keyword"},
-              "source_file":   {"type": "keyword"},
-              "doc_type":      {"type": "keyword"},  
+              "file_id":       {"type": "keyword"},
+              "file_name":     {"type": "keyword"},
+              "doc_type":      {"type": "keyword"},
               "@timestamp":    {"type": "date"},
-              "doc_hash":      {"type": "keyword"},  
+              "version":       {"type": "integer"},
               
               "page_number":    {"type": "integer"},
               "section_title":  {"type": "keyword"},
