@@ -130,4 +130,23 @@ Switched to **Docling** + `HybridChunker`:
 - **No second store**: ES handles metadata filtering (date range, sender, thread), keyword (BM25), and vector search — no SQLite or secondary index needed.
 - **"First mention"**: implemented as `date: asc` + `size: 1` on filtered results — not a special pipeline.
 
+# 04/12/2026
 
+## Hybrid search ranking: manual RRF (dev) vs. native RRF (production)
+
+**Context**: The search endpoint combines BM25 keyword results and KNN dense-vector results. These two ranked lists need to be merged into a single ranking. Elasticsearch provides native **Reciprocal Rank Fusion (RRF)** for exactly this, but it requires a Platinum or Enterprise license — unavailable in the free local dev environment (Basic license). Attempting to use `rank: {rrf: {}}` raises a `403 security_exception: current license is non-compliant for [Reciprocal Rank Fusion (RRF)]`.
+
+**Current implementation (dev)**: Manual RRF in Python (`es_service.py: search`).
+- BM25 and KNN queries are issued as two separate ES requests.
+- Results are merged in Python using the standard RRF formula: `score += 1 / (k + rank)` for each hit across both lists, with `k = 60` (ES default).
+- Top `size` hits by combined score are returned.
+
+**Production recommendation**: Replace with native ES RRF (`rank: {rrf: {}}`).
+
+Reasons to prefer native RRF in production:
+- **Single round-trip**: one request instead of two, halving ES network overhead at query time.
+- **Consistent tie-breaking**: ES applies RRF internally with access to full shard-level ranking; the Python implementation merges only the top-N results from each query, so hits that rank just outside the fetch window are invisible to the merge step.
+- **Maintained by Elastic**: behaviour is versioned and tested; the manual approach requires re-validation on ES upgrades.
+- **Future features**: native RRF composes with other ES features (e.g. re-rankers, learning-to-rank) more cleanly than a Python post-processing step.
+
+**Migration**: swap the two-query pattern in `es_service.py: search` back to a single `self.es.search(index=..., knn=..., query=..., rank={"rrf": {}}, ...)` call once running on a licensed cluster.

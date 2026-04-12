@@ -69,10 +69,10 @@ if query:
                     subject = hit.get("subject", "—")
                     sender = hit.get("sender", "—")
                     date = hit.get("email_date", "—")[:10] if hit.get("email_date") else "—"
-                    label = f"📧 {subject}  ·  {sender}  ·  {date}"
+                    label = f"Email: {subject}  ·  {sender}  ·  {date}"
                 else:
                     page = hit.get("page_number", "—")
-                    label = f"📄 {file_name}  ·  page {page}"
+                    label = f"PDF: {file_name}  ·  page {page}"
 
                 with st.expander(f"#{i}  {label}"):
                     st.caption(f"Source: `{file_name}`")

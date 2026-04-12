@@ -92,25 +92,47 @@ class ESService:
         return indexed_count
 
     def search(self, query_text: str, query_embedding: list[float], size: int = 5):
-        knn = {
-            "field": "embedding",
-            "query_vector": query_embedding,
-            "k": size,
-            "num_candidates": 100,
-        }
-        query = {"match": {"content": query_text}}
         fields = ["content", "file_name", "doc_type", "page_number", "sender", "subject", "email_date"]
-        response = self.es.search(
+        fetch_size = max(size * 4, 20)
+
+        bm25_resp = self.es.search(
             index=INDEX_NAME,
-            knn=knn,
-            query=query,
-            rank={"rrf": {}},
+            query={"match": {"content": query_text}},
             source=False,
             fields=fields,
-            size=size,
+            size=fetch_size,
         )
+        knn_resp = self.es.search(
+            index=INDEX_NAME,
+            knn={
+                "field": "embedding",
+                "query_vector": query_embedding,
+                "k": fetch_size,
+                "num_candidates": 100,
+            },
+            source=False,
+            fields=fields,
+            size=fetch_size,
+        )
+
+        # Manual RRF: score = sum of 1 / (k + rank) across result lists
+        RRF_K = 60
+        scores: dict[str, float] = {}
+        docs: dict[str, dict] = {}
+
+        for rank, hit in enumerate(bm25_resp["hits"]["hits"], start=1):
+            doc_id = hit["_id"]
+            scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (RRF_K + rank)
+            docs[doc_id] = hit["fields"]
+
+        for rank, hit in enumerate(knn_resp["hits"]["hits"], start=1):
+            doc_id = hit["_id"]
+            scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (RRF_K + rank)
+            docs[doc_id] = hit["fields"]
+
+        top_ids = sorted(scores, key=scores.__getitem__, reverse=True)[:size]
         return [
             {k: v[0] if isinstance(v, list) and len(v) == 1 else v
-             for k, v in hit["fields"].items()}
-            for hit in response["hits"]["hits"]
+             for k, v in docs[doc_id].items()}
+            for doc_id in top_ids
         ]
