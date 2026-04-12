@@ -66,12 +66,13 @@ class ESService:
         result = self.es.count(index=INDEX_NAME, body={"query": {"term": {"email_id": email_id}}})
         return result["count"] > 0
 
-    def index_emails(self, filename: str, chunks: list, embeddings: list[list[float]], metadata_list: list[dict]):
+    def index_emails(self, filename: str, file_id: str, chunks: list, embeddings: list[list[float]], metadata_list: list[dict]):
         indexed_count = 0
         for chunk, embedding, meta in zip(chunks, embeddings, metadata_list):
             if self.email_exists(meta["email_id"]):
                 continue
             doc = {
+                "file_id": file_id,
                 "file_name": filename,
                 "doc_type": "email",
                 "@timestamp": datetime.now(timezone.utc).isoformat(),

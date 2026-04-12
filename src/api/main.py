@@ -41,23 +41,40 @@ app = FastAPI(lifespan=lifespan)
 async def upload_file(file: UploadFile):
     contents = await file.read()
     file_id = hashlib.sha256(contents).hexdigest()
+    suffix = os.path.splitext(file.filename)[1].lower()
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-        tmp.write(contents)
-        tmp_path = tmp.name
+    if suffix == ".pdf":
+        if es_service.file_exists(file_id):
+            return {"filename": file.filename, "file_id": file_id, "status": "already_indexed"}
 
-    if es_service.file_exists(file_id):
-        return {"filename": file.filename, "file_id": file_id, "status": "already_indexed"}
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(contents)
+            tmp_path = tmp.name
 
-    version = es_service.get_next_version(file.filename)
+        version = es_service.get_next_version(file.filename)
+        try:
+            chunks, embeddings = pdf_processor.get_chunks(tmp_path)
+            es_service.index_chunks(file.filename, file_id, version, chunks, embeddings)
+        finally:
+            os.unlink(tmp_path)
 
-    try:
-        chunks, embeddings = pdf_processor.get_chunks(tmp_path)
-        es_service.index_chunks(file.filename, file_id, version, chunks, embeddings)
-    finally:
-        os.unlink(tmp_path)
+        return {"filename": file.filename, "file_id": file_id, "version": version, "chunks_indexed": len(chunks)}
 
-    return {"filename": file.filename, "file_id": file_id, "version": version, "chunks_indexed": len(chunks)}
+    elif suffix in (".eml", ".mbox"):
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(contents)
+            tmp_path = tmp.name
+
+        try:
+            chunks, embeddings, metadata_list = email_processor.process(tmp_path)
+            indexed = es_service.index_emails(file.filename, file_id, chunks, embeddings, metadata_list)
+        finally:
+            os.unlink(tmp_path)
+
+        return {"filename": file.filename, "emails_indexed": indexed}
+
+    else:
+        return {"error": f"Unsupported file type: {suffix}. Supported: .pdf, .eml, .mbox"}
 
 
 @app.post("/query")

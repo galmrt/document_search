@@ -121,13 +121,13 @@ Switched to **Docling** + `HybridChunker`:
 
 ## Email archive assumptions
 
-- **Format**: JSONL (one email per line) — 800K individual files is a filesystem problem; JSONL is streamable
+- **Format**: `.mbox` — Google Takeout exports email archives in mbox format, which is the most likely source for bulk email ingestion. A single `.mbox` file contains the entire archive as a sequence of messages; Python stdlib `mailbox.mbox` iterates over them directly. `.eml` (single-message) is also supported for one-off uploads.
 - **Schema**: `email_id`, `thread_id`, `sender`, `date`, `subject`, `body`
-- **Threading**: `thread_id` is a stable identifier grouping all replies in a conversation
-- **Body**: plain text only, no HTML, no attachments
-- **Quoted reply content**: stripped before embedding — replies quote previous emails, indexing duplicated content degrades retrieval
-- **Deduplication**: `email_id` = hash of `thread_id + date + sender`, consistent with PDF approach
-- **No second store**: ES handles metadata filtering (date range, sender, thread), keyword (BM25), and vector search — no SQLite or secondary index needed
-- **"First mention"**: implemented as `date: asc` + `size: 1` on filtered results — not a special pipeline
+- **Threading**: `thread_id` reconstructed from `References` → `In-Reply-To` → `Message-ID` headers. Google Takeout also includes `X-GM-THRID` (the authoritative Gmail thread ID) — can be used as a more reliable fallback if thread grouping accuracy becomes a problem.
+- **Body**: plain text part extracted from `multipart/alternative` messages; quoted-printable and base64 transfer encodings decoded transparently by `email.message.Message.get_payload(decode=True)`.
+- **Quoted reply content**: stripped before embedding — `>` prefixed lines removed, and content below "On ... wrote:" reply headers truncated. Each message indexes only its new content.
+- **Deduplication**: `email_id` = SHA-256 of `Message-ID` header, consistent with PDF file_id approach.
+- **No second store**: ES handles metadata filtering (date range, sender, thread), keyword (BM25), and vector search — no SQLite or secondary index needed.
+- **"First mention"**: implemented as `date: asc` + `size: 1` on filtered results — not a special pipeline.
 
 
