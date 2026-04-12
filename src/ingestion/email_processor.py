@@ -4,6 +4,7 @@ import mailbox
 import re
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from html.parser import HTMLParser
 from pathlib import Path
 
 from langchain_core.documents import Document
@@ -17,6 +18,24 @@ REPLY_HEADER_RE = re.compile(
     r"^(On\s.+wrote:|From:.+\nSent:.+\nTo:.+|_{3,}|-{3,})",
     re.MULTILINE | re.IGNORECASE,
 )
+
+
+class _HTMLStripper(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self._parts: list[str] = []
+
+    def handle_data(self, data: str) -> None:
+        self._parts.append(data)
+
+    def get_text(self) -> str:
+        return " ".join(self._parts)
+
+
+def _strip_html(text: str) -> str:
+    stripper = _HTMLStripper()
+    stripper.feed(text)
+    return stripper.get_text()
 
 
 def _strip_quoted_content(body: str) -> str:
@@ -46,14 +65,16 @@ def _get_plain_body(msg: email.message.Message) -> str:
         for part in msg.walk():
             if part.get_content_type() == "text/plain" and part.get_content_disposition() != "attachment":
                 charset = part.get_content_charset() or "utf-8"
-                return part.get_payload(decode=True).decode(charset, errors="replace")
+                text = part.get_payload(decode=True).decode(charset, errors="replace")
+                return _strip_html(text)
     else:
         charset = msg.get_content_charset() or "utf-8"
-        return msg.get_payload(decode=True).decode(charset, errors="replace")
+        text = msg.get_payload(decode=True).decode(charset, errors="replace")
+        return _strip_html(text)
     return ""
 
 
-def _parse_message(msg: email.message.Message, file_name: str) -> tuple[Document, list[float], dict] | tuple[None, None, None]:
+def _parse_message(msg: email.message.Message, file_name: str) -> Document | None:
     sender = msg.get("From", "")
     subject = msg.get("Subject", "")
     message_id = msg.get("Message-ID", "").strip("<>") or f"{file_name}-{sender}-{subject}"
@@ -67,33 +88,28 @@ def _parse_message(msg: email.message.Message, file_name: str) -> tuple[Document
     clean_body = _strip_quoted_content(_get_plain_body(msg))
 
     if not clean_body:
-        return None, None, None
+        return None
 
     text = f"{subject}\n\n{clean_body}" if subject else clean_body
 
-    metadata = {
-        "email_id": _make_email_id(message_id),
-        "thread_id": thread_id,
-        "sender": sender,
-        "email_date": email_date,
-        "subject": subject,
-    }
-    document = Document(
+    return Document(
         page_content=text,
-        metadata={"file_name": file_name},
+        metadata={
+            "file_name": file_name,
+            "email_id": _make_email_id(message_id),
+            "thread_id": thread_id,
+            "sender": sender,
+            "email_date": email_date,
+            "subject": subject,
+        },
     )
-    return document, text, metadata
 
 
 class EmailProcessor:
     def __init__(self, embedding_service: EmbeddingService):
         self.embedding_service = embedding_service
 
-    def process(self, file_path: str) -> tuple[list[Document], list[list[float]], list[dict]]:
-        """
-        Process a .eml or .mbox file.
-        Returns (documents, embeddings, metadata_list).
-        """
+    def process(self, file_path: str) -> tuple[list[Document], list[list[float]]]:
         suffix = Path(file_path).suffix.lower()
         if suffix == ".eml":
             return self._process_eml(file_path)
@@ -102,31 +118,25 @@ class EmailProcessor:
         else:
             raise ValueError(f"Unsupported email format: {suffix}. Expected .eml or .mbox")
 
-    def _process_eml(self, file_path: str) -> tuple[list[Document], list[list[float]], list[dict]]:
+    def _process_eml(self, file_path: str) -> tuple[list[Document], list[list[float]]]:
         with open(file_path, "rb") as f:
             msg = email.message_from_bytes(f.read())
 
-        doc, text, meta = _parse_message(msg, Path(file_path).name)
+        doc = _parse_message(msg, Path(file_path).name)
         if doc is None:
-            return [], [], []
+            return [], []
 
-        embeddings = self.embedding_service.encode([text])
-        doc.metadata["file_name"] = Path(file_path).name
-        return [doc], embeddings, [meta]
+        return [doc], [self.embedding_service.encode_one(doc.page_content)]
 
-    def _process_mbox(self, file_path: str) -> tuple[list[Document], list[list[float]], list[dict]]:
+    def _process_mbox(self, file_path: str) -> tuple[list[Document], list[list[float]]]:
         mbox = mailbox.mbox(file_path)
-        documents = []
-        texts = []
-        metadata_list = []
+        documents = [
+            doc for msg in mbox
+            if (doc := _parse_message(msg, Path(file_path).name)) is not None
+        ]
 
-        for msg in mbox:
-            doc, text, meta = _parse_message(msg, Path(file_path).name)
-            if doc is None:
-                continue
-            documents.append(doc)
-            texts.append(text)
-            metadata_list.append(meta)
+        if not documents:
+            return [], []
 
-        embeddings = self.embedding_service.encode(texts) if texts else []
-        return documents, embeddings, metadata_list
+        embeddings = self.embedding_service.encode([doc.page_content for doc in documents])
+        return documents, embeddings

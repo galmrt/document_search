@@ -22,8 +22,8 @@ class ESService:
             self.es.indices.create(index=INDEX_NAME, body=mapping)
             self.logger.info(f"Created index: {INDEX_NAME}")
 
-    def file_exists(self, file_id: str) -> bool:
-        result = self.es.count(index=INDEX_NAME, body={"query": {"term": {"file_id": file_id}}})
+    def exists(self, field: str, value: str) -> bool:
+        result = self.es.count(index=INDEX_NAME, body={"query": {"term": {field: value}}})
         return result["count"] > 0
 
     def get_next_version(self, filename: str) -> int:
@@ -62,14 +62,11 @@ class ESService:
         self.logger.info(f"Successfully indexed {indexed_count}/{len(chunks)} chunks for {filename}")
         return indexed_count
     
-    def email_exists(self, email_id: str) -> bool:
-        result = self.es.count(index=INDEX_NAME, body={"query": {"term": {"email_id": email_id}}})
-        return result["count"] > 0
-
-    def index_emails(self, filename: str, file_id: str, chunks: list, embeddings: list[list[float]], metadata_list: list[dict]):
+    def index_emails(self, filename: str, file_id: str, chunks: list[Document], embeddings: list[list[float]]):
         indexed_count = 0
-        for chunk, embedding, meta in zip(chunks, embeddings, metadata_list):
-            if self.email_exists(meta["email_id"]):
+        for chunk, embedding in zip(chunks, embeddings):
+            meta = chunk.metadata
+            if self.exists("email_id", meta["email_id"]):
                 continue
             doc = {
                 "file_id": file_id,
@@ -94,13 +91,26 @@ class ESService:
         self.logger.info(f"Indexed {indexed_count} emails from {filename}")
         return indexed_count
 
-    def search(self, query_embedding: list[float], size: int = 5):
-        body = {
-        "field": "embedding",
-        "query_vector": query_embedding,
-        "k": size,
-        "num_candidates": 100
-    }
-    
-        response = self.es.search(index=INDEX_NAME, source=False, fields=["content"], knn=body)
-        return [hit["fields"] for hit in response["hits"]["hits"]]
+    def search(self, query_text: str, query_embedding: list[float], size: int = 5):
+        knn = {
+            "field": "embedding",
+            "query_vector": query_embedding,
+            "k": size,
+            "num_candidates": 100,
+        }
+        query = {"match": {"content": query_text}}
+        fields = ["content", "file_name", "doc_type", "page_number", "sender", "subject", "email_date"]
+        response = self.es.search(
+            index=INDEX_NAME,
+            knn=knn,
+            query=query,
+            rank={"rrf": {}},
+            source=False,
+            fields=fields,
+            size=size,
+        )
+        return [
+            {k: v[0] if isinstance(v, list) and len(v) == 1 else v
+             for k, v in hit["fields"].items()}
+            for hit in response["hits"]["hits"]
+        ]

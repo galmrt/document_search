@@ -27,8 +27,7 @@ async def lifespan(app: FastAPI):
     es_service = ESService(os.getenv("ELASTICSEARCH_URL", "http://localhost:9200"))
     es_service.ensure_index()
     embedding_service = EmbeddingService()
-    converter = DocumentConverter()
-    pdf_processor = PDFProcessor(converter, embedding_service)
+    pdf_processor = PDFProcessor(DocumentConverter(), embedding_service)
     email_processor = EmailProcessor(embedding_service)
     print("Services started")
     yield
@@ -44,7 +43,7 @@ async def upload_file(file: UploadFile):
     suffix = os.path.splitext(file.filename)[1].lower()
 
     if suffix == ".pdf":
-        if es_service.file_exists(file_id):
+        if es_service.exists("file_id", file_id):
             return {"filename": file.filename, "file_id": file_id, "status": "already_indexed"}
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
@@ -66,8 +65,8 @@ async def upload_file(file: UploadFile):
             tmp_path = tmp.name
 
         try:
-            chunks, embeddings, metadata_list = email_processor.process(tmp_path)
-            indexed = es_service.index_emails(file.filename, file_id, chunks, embeddings, metadata_list)
+            chunks, embeddings = email_processor.process(tmp_path)
+            indexed = es_service.index_emails(file.filename, file_id, chunks, embeddings)
         finally:
             os.unlink(tmp_path)
 
@@ -78,7 +77,7 @@ async def upload_file(file: UploadFile):
 
 
 @app.post("/query")
-async def query(query: str):
-    query_embedding = embedding_service.encode([query])[0]
-    results = es_service.search(query_embedding, size=5)
+async def query(query: str, size: int = 5):
+    query_embedding = embedding_service.encode_one(query)
+    results = es_service.search(query, query_embedding, size=size)
     return {"results": results}

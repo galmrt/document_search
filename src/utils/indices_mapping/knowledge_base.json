@@ -9,9 +9,7 @@
               "version":       {"type": "integer"},
               
               "page_number":    {"type": "integer"},
-              "section_title":  {"type": "keyword"},
-              "chunk_type":     {"type": "keyword"},  
-              "chunk_index":    {"type": "integer"},  
+              "chunk_index":    {"type": "integer"},
 
               
               "content": {
