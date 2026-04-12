@@ -62,6 +62,37 @@ class ESService:
         self.logger.info(f"Successfully indexed {indexed_count}/{len(chunks)} chunks for {filename}")
         return indexed_count
     
+    def email_exists(self, email_id: str) -> bool:
+        result = self.es.count(index=INDEX_NAME, body={"query": {"term": {"email_id": email_id}}})
+        return result["count"] > 0
+
+    def index_emails(self, filename: str, chunks: list, embeddings: list[list[float]], metadata_list: list[dict]):
+        indexed_count = 0
+        for chunk, embedding, meta in zip(chunks, embeddings, metadata_list):
+            if self.email_exists(meta["email_id"]):
+                continue
+            doc = {
+                "file_name": filename,
+                "doc_type": "email",
+                "@timestamp": datetime.now(timezone.utc).isoformat(),
+                "content": chunk.page_content,
+                "embedding": embedding,
+                "email_id": meta["email_id"],
+                "thread_id": meta["thread_id"],
+                "sender": meta["sender"],
+                "email_date": meta["email_date"],
+                "subject": meta["subject"],
+            }
+            try:
+                self.es.index(index=INDEX_NAME, document=doc)
+                indexed_count += 1
+            except Exception as e:
+                self.logger.error(f"Error indexing email {meta['email_id']}: {e}")
+                raise
+
+        self.logger.info(f"Indexed {indexed_count} emails from {filename}")
+        return indexed_count
+
     def search(self, query_embedding: list[float], size: int = 5):
         body = {
         "field": "embedding",

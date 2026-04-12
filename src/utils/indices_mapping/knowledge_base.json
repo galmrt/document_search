@@ -31,6 +31,7 @@
               "thread_id":  {"type": "keyword"},
               "sender":     {"type": "keyword"},
               "subject":    {"type": "text"},
+              "email_date": {"type": "date"},
             
               "access_type":  {"type": "keyword"}
           }

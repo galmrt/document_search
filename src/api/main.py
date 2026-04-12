@@ -11,22 +11,25 @@ from docling.document_converter import DocumentConverter
 from src.utils.es_service import ESService
 from src.utils.embedding_service import EmbeddingService
 from src.ingestion.pdf_processor import PDFProcessor
+from src.ingestion.email_processor import EmailProcessor
 
 load_dotenv()
 
 es_service: ESService = None
 embedding_service: EmbeddingService = None
 pdf_processor: PDFProcessor = None
+email_processor: EmailProcessor = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global es_service, embedding_service, pdf_processor
+    global es_service, embedding_service, pdf_processor, email_processor
     es_service = ESService(os.getenv("ELASTICSEARCH_URL", "http://localhost:9200"))
     es_service.ensure_index()
     embedding_service = EmbeddingService()
     converter = DocumentConverter()
     pdf_processor = PDFProcessor(converter, embedding_service)
+    email_processor = EmailProcessor(embedding_service)
     print("Services started")
     yield
 

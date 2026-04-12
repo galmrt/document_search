@@ -101,3 +101,33 @@ Replaced fixed-size `RecursiveCharacterTextSplitter` with a single-pass semantic
 - `file_id`: SHA-256 hash of file bytes. Shared across all chunks of the same file. Used for deduplication — re-uploading identical content is a no-op.
 - `version`: auto-incremented integer per `file_name`. Same filename + different content = new version.
 - `file_name`: original uploaded filename.
+
+# 04/11/2026
+
+## PDF extraction: switch to Docling
+Previous approach (pymupdf4llm) struggled to maintain clean page breaks — headers, footers and cross-page paragraphs were bleeding into each other, polluting chunks with layout artifacts.
+
+Switched to **Docling** + `HybridChunker`:
+
+**Benefits:**
+- Structure-aware extraction — respects headings, sections, tables
+- `HybridChunker` splits on document structure, not arbitrary character counts
+- Heading metadata available per chunk (`chunk.meta.headings`) — prepended to first chunk of each section for better retrieval
+- No mid-sentence or mid-table splits
+
+**Drawbacks:**
+- Slower than pymupdf4llm (full document understanding pipeline)
+- No built-in overlap — implemented manually: 200-char sentence-boundary overlap within sections only, reset at section boundaries
+
+## Email archive assumptions
+
+- **Format**: JSONL (one email per line) — 800K individual files is a filesystem problem; JSONL is streamable
+- **Schema**: `email_id`, `thread_id`, `sender`, `date`, `subject`, `body`
+- **Threading**: `thread_id` is a stable identifier grouping all replies in a conversation
+- **Body**: plain text only, no HTML, no attachments
+- **Quoted reply content**: stripped before embedding — replies quote previous emails, indexing duplicated content degrades retrieval
+- **Deduplication**: `email_id` = hash of `thread_id + date + sender`, consistent with PDF approach
+- **No second store**: ES handles metadata filtering (date range, sender, thread), keyword (BM25), and vector search — no SQLite or secondary index needed
+- **"First mention"**: implemented as `date: asc` + `size: 1` on filtered results — not a special pipeline
+
+
