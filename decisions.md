@@ -150,3 +150,18 @@ Reasons to prefer native RRF in production:
 - **Future features**: native RRF composes with other ES features (e.g. re-rankers, learning-to-rank) more cleanly than a Python post-processing step.
 
 **Migration**: swap the two-query pattern in `es_service.py: search` back to a single `self.es.search(index=..., knn=..., query=..., rank={"rrf": {}}, ...)` call once running on a licensed cluster.
+
+## JSON ingestion: adaptive field classification
+
+Compliance JSON exports have an unknown schema — no sample files are available and the field structure varies by export type.
+
+**Decision**: classify fields at ingestion time based on content length rather than a hardcoded schema.
+
+- **Content fields** (embedded + BM25 indexed): string fields where the value is ≥ 10 words. These drive semantic search. Stored as `"field_name: value"` concatenated into the chunk's `content` field.
+- **Metadata fields** (stored, not embedded): short strings, numbers, booleans, dates — anything that isn't substantive prose. Stored as individual fields on the ES document. ES dynamic mapping picks up the types automatically (no mapping change required).
+
+**Threshold**: 10 words is a practical cut-off that separates IDs/codes/statuses from actual descriptive text. Adjustable if real files show different distributions.
+
+**Batching**: records are batched into ~400-word chunks before embedding to avoid near-empty vectors from short records. Per-record metadata is not preserved at the chunk level when batching — a known limitation. If records are large enough to be one-chunk-each, per-record metadata can be added to the Document metadata and passed through `index_chunks`.
+
+**Production note**: once a schema is known, replace the adaptive classifier with explicit field mappings targeting the actual text and metadata fields for better embedding quality.

@@ -6,12 +6,11 @@ API_URL = "http://localhost:8000"
 st.set_page_config(page_title="Altumatim Search", layout="wide")
 st.title("Altumatim Legal Document Search")
 
-# ── Sidebar: file upload ──────────────────────────────────────────────────────
 with st.sidebar:
     st.header("Upload Documents")
     uploaded = st.file_uploader(
-        "PDF, .eml or .mbox",
-        type=["pdf", "eml", "mbox"],
+        "PDF, .eml, .mbox or .json",
+        type=["pdf", "eml", "mbox", "json"],
         accept_multiple_files=True,
     )
     if uploaded:
@@ -34,16 +33,20 @@ with st.sidebar:
             else:
                 st.error(f"Upload failed: {resp.text}")
 
-# ── Main: search ──────────────────────────────────────────────────────────────
-query = st.text_input("Ask a question or search for a clause…", placeholder="e.g. termination clause notice period")
 
-col1, col2 = st.columns([1, 4])
-with col1:
-    top_k = st.selectbox("Results", [3, 5, 10], index=1)
-with col2:
-    doc_type_filter = st.selectbox("Document type", ["All", "PDF", "Email"], index=0)
+query = st.text_input("Ask a question or search for a clause", placeholder="e.g. termination clause notice period")
+doc_search_filter = st.selectbox("Seach in following document types", ["All", "PDF", "Email", "JSON"], index=0)
+
+
+
 
 if query:
+    st.subheader("Results")
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        top_k = st.selectbox("Results", [3, 5, 10], index=1)
+    with col2:
+        doc_type_filter = st.selectbox("Document type", ["All", "PDF", "Email", "JSON"], index=0)
     with st.spinner("Searching…"):
         resp = requests.post(f"{API_URL}/query", params={"query": query, "size": top_k})
 

@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timezone
 
 from elasticsearch import Elasticsearch
+from elasticsearch.helpers import bulk
 from langchain_core.documents import Document
 
 INDEX_NAME = "knowledge_base"
@@ -35,59 +36,56 @@ class ESService:
         current = result["aggregations"]["max_version"]["value"]
         return int(current) + 1 if current else 1
 
-    def index_chunks(self, filename: str, file_id: str, version: int, chunks: list[Document], embeddings: list[list[float]]):
-        indexed_count = 0
-        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-            doc = {
-                "file_id": file_id,
-                "file_name": filename,
-                "doc_type": "pdf",
-                "@timestamp": datetime.now(timezone.utc).isoformat(),
-                "version": version,
-                "page_number": chunk.metadata.get("page_number", 0),
-                "chunk_index": i,
-                "content": chunk.page_content,
-                "embedding": embedding,
+    def index_chunks(self, filename: str, file_id: str, version: int, chunks: list[Document], embeddings: list[list[float]], doc_type: str = "pdf"):
+        timestamp = datetime.now(timezone.utc).isoformat()
+        actions = [
+            {
+                "_index": INDEX_NAME,
+                "_source": {
+                    "file_id": file_id,
+                    "file_name": filename,
+                    "doc_type": doc_type,
+                    "@timestamp": timestamp,
+                    "version": version,
+                    "page_number": chunk.metadata.get("page_number", 0),
+                    "chunk_index": i,
+                    "content": chunk.page_content,
+                    "embedding": embedding,
+                },
             }
-
-            try:
-                response = self.es.index(index=INDEX_NAME, document=doc)
-                indexed_count += 1
-                if i == 0:
-                    self.logger.info(f"First chunk indexed with ID: {response['_id']}")
-            except Exception as e:
-                self.logger.error(f"Error indexing chunk {i} for {filename}: {e}")
-                raise
-
+            for i, (chunk, embedding) in enumerate(zip(chunks, embeddings))
+        ]
+        indexed_count, errors = bulk(self.es, actions, raise_on_error=False)
+        if errors:
+            self.logger.error(f"{len(errors)} chunks failed to index for {filename}")
         self.logger.info(f"Successfully indexed {indexed_count}/{len(chunks)} chunks for {filename}")
         return indexed_count
     
     def index_emails(self, filename: str, file_id: str, chunks: list[Document], embeddings: list[list[float]]):
-        indexed_count = 0
-        for chunk, embedding in zip(chunks, embeddings):
-            meta = chunk.metadata
-            if self.exists("email_id", meta["email_id"]):
-                continue
-            doc = {
-                "file_id": file_id,
-                "file_name": filename,
-                "doc_type": "email",
-                "@timestamp": datetime.now(timezone.utc).isoformat(),
-                "content": chunk.page_content,
-                "embedding": embedding,
-                "email_id": meta["email_id"],
-                "thread_id": meta["thread_id"],
-                "sender": meta["sender"],
-                "email_date": meta["email_date"],
-                "subject": meta["subject"],
+        timestamp = datetime.now(timezone.utc).isoformat()
+        actions = [
+            {
+                "_index": INDEX_NAME,
+                "_source": {
+                    "file_id": file_id,
+                    "file_name": filename,
+                    "doc_type": "email",
+                    "@timestamp": timestamp,
+                    "content": chunk.page_content,
+                    "embedding": embedding,
+                    "email_id": meta["email_id"],
+                    "thread_id": meta["thread_id"],
+                    "sender": meta["sender"],
+                    "email_date": meta["email_date"],
+                    "subject": meta["subject"],
+                },
             }
-            try:
-                self.es.index(index=INDEX_NAME, document=doc)
-                indexed_count += 1
-            except Exception as e:
-                self.logger.error(f"Error indexing email {meta['email_id']}: {e}")
-                raise
-
+            for chunk, embedding in zip(chunks, embeddings)
+            if not self.exists("email_id", (meta := chunk.metadata)["email_id"])
+        ]
+        indexed_count, errors = bulk(self.es, actions, raise_on_error=False)
+        if errors:
+            self.logger.error(f"{len(errors)} emails failed to index from {filename}")
         self.logger.info(f"Indexed {indexed_count} emails from {filename}")
         return indexed_count
 
