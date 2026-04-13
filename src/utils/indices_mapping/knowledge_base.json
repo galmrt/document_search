@@ -26,12 +26,18 @@
               },
 
               
+              "email_id":   {"type": "keyword"},
               "thread_id":  {"type": "keyword"},
               "sender":     {"type": "keyword"},
-              "subject":    {"type": "text"},
+              "subject": {
+                  "type": "text",
+                  "fields": { "keyword": {"type": "keyword"} }
+              },
               "email_date": {"type": "date"},
             
-              "access_type":  {"type": "keyword"}
+              "access_type":  {"type": "keyword"},
+
+              "json_metadata": {"type": "flattened"}
           }
       },
       "settings": {

@@ -49,6 +49,8 @@ async def upload_file(file: UploadFile, request: Request):
 
     suffix = os.path.splitext(file.filename)[1].lower()
 
+    await asyncio.to_thread(es_service.ensure_index)
+
     if suffix == ".pdf":
         contents = await file.read()
         file_id = hashlib.sha256(contents).hexdigest()

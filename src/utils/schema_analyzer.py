@@ -6,7 +6,7 @@ import os
 import requests
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
 OLLAMA_TIMEOUT = 30
 
 logger = logging.getLogger(__name__)
@@ -20,8 +20,9 @@ JSON sample:
 
 Return a JSON object with:
 - "skip_keys": list of key names that are boilerplate, config, UUIDs, IDs, or otherwise not worth searching — these will be removed before indexing
+- "metadata_keys": list of key names that are structured, filterable fields (e.g. status, category, date, framework, type) — these will be stored as metadata for filtering, not as searchable content
 
-Example: {{"skip_keys": ["parameters", "policyDefinitions", "policyDefinitionGroups", "versions"]}}
+Example: {{"skip_keys": ["parameters", "policyDefinitions", "policyDefinitionGroups", "versions"], "metadata_keys": ["status", "framework", "control_id", "severity"]}}
 
 Respond with valid JSON only."""
 
@@ -83,6 +84,7 @@ def analyze(data: dict) -> dict | None:
         resp.raise_for_status()
         schema = json.loads(resp.json().get("response", "{}"))
         schema.setdefault("skip_keys", [])
+        schema.setdefault("metadata_keys", [])
 
         _cache[fp] = schema
         logger.info(f"Schema analysis result: {schema}")

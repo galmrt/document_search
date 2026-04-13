@@ -1,0 +1,18 @@
+[
+  {
+    "id": "CR-TEST-001",
+    "framework": "SOC 2 Type II",
+    "control_id": "CC6.1",
+    "status": "COMPLIANT",
+    "title": "Multi-Factor Authentication Enforcement",
+    "description": "Multi-factor authentication is enforced for all privileged accounts and remote access sessions via Okta. Quarterly access reviews confirm no dormant accounts remain active beyond 90 days."
+  },
+  {
+    "id": "CR-TEST-002",
+    "framework": "GDPR",
+    "control_id": "Art.32",
+    "status": "NON_COMPLIANT",
+    "title": "Pseudonymisation Gap in Marketing Pipeline",
+    "description": "Email addresses and IP addresses are retained in plaintext in two staging tables for up to 72 hours before pseudonymisation is applied, violating the data minimisation principle under Article 32."
+  }
+]

@@ -51,6 +51,7 @@ class ESService:
                     "chunk_index": i,
                     "content": chunk.page_content,
                     "embedding": embedding,
+                    "json_metadata": chunk.metadata.get("json_metadata") or None,
                 },
             }
             for i, (chunk, embedding) in enumerate(zip(chunks, embeddings))
@@ -89,15 +90,16 @@ class ESService:
         return indexed_count
 
     def search(self, query_text: str, query_embedding: list[float], size: int = 5, doc_type: str | None = None):
-        fields = ["content", "file_name", "doc_type", "page_number", "sender", "subject", "email_date"]
+        fields = ["content", "file_name", "doc_type", "page_number", "sender", "subject", "email_date", "email_id", "json_metadata"]
         fetch_size = max(size * 4, 20)
 
         doc_type_filter = {"term": {"doc_type": doc_type.lower()}} if doc_type else None
 
+        multi_match = {"multi_match": {"query": query_text, "fields": ["content", "subject^2"]}}
         bm25_query = (
-            {"bool": {"must": {"match": {"content": query_text}}, "filter": doc_type_filter}}
+            {"bool": {"must": multi_match, "filter": doc_type_filter}}
             if doc_type_filter
-            else {"match": {"content": query_text}}
+            else multi_match
         )
         knn_body = {
             "field": "embedding",

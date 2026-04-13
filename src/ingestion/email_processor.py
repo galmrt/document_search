@@ -8,10 +8,24 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
+from langchain_experimental.text_splitter import SemanticChunker
 
 from src.utils.embedding_service import EmbeddingService
 
-# Matches quoted reply lines: "> text"
+class _EmbeddingsAdapter(Embeddings):
+    """Thin adapter so EmbeddingService satisfies LangChain's Embeddings interface."""
+
+    def __init__(self, service: EmbeddingService):
+        self._service = service
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self._service.encode(texts)
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._service.encode_query(text)
+
+
 QUOTED_LINE_RE = re.compile(r"^\s*>+.*$", re.MULTILINE)
 # Matches common reply headers — cut everything below
 REPLY_HEADER_RE = re.compile(
@@ -75,8 +89,8 @@ def _get_plain_body(msg: email.message.Message) -> str:
 
 
 def _parse_message(msg: email.message.Message, file_name: str) -> Document | None:
-    sender = msg.get("From", "")
-    subject = msg.get("Subject", "")
+    sender = str(msg.get("From", ""))
+    subject = str(msg.get("Subject", ""))
     message_id = msg.get("Message-ID", "").strip("<>") or f"{file_name}-{sender}-{subject}"
 
     try:
@@ -90,7 +104,7 @@ def _parse_message(msg: email.message.Message, file_name: str) -> Document | Non
     if not clean_body:
         return None
 
-    text = f"{subject}\n\n{clean_body}" if subject else clean_body
+    text = clean_body
 
     return Document(
         page_content=text,
@@ -108,6 +122,14 @@ def _parse_message(msg: email.message.Message, file_name: str) -> Document | Non
 class EmailProcessor:
     def __init__(self, embedding_service: EmbeddingService):
         self.embedding_service = embedding_service
+        self._chunker = SemanticChunker(_EmbeddingsAdapter(embedding_service))
+
+    def _chunk_email_doc(self, doc: Document) -> list[Document]:
+        """Semantic chunking: split on embedding-detected topic boundaries."""
+        chunks = self._chunker.create_documents(
+            [doc.page_content], metadatas=[doc.metadata]
+        )
+        return chunks if chunks else [doc]
 
     def process(self, file_path: str) -> tuple[list[Document], list[list[float]]]:
         suffix = Path(file_path).suffix.lower()
@@ -126,14 +148,17 @@ class EmailProcessor:
         if doc is None:
             return [], []
 
-        return [doc], [self.embedding_service.encode_one(doc.page_content)]
+        chunks = self._chunk_email_doc(doc)
+        embeddings = self.embedding_service.encode([c.page_content for c in chunks])
+        return chunks, embeddings
 
     def _process_mbox(self, file_path: str) -> tuple[list[Document], list[list[float]]]:
         mbox = mailbox.mbox(file_path)
-        documents = [
-            doc for msg in mbox
-            if (doc := _parse_message(msg, Path(file_path).name)) is not None
-        ]
+        documents = []
+        for msg in mbox:
+            doc = _parse_message(msg, Path(file_path).name)
+            if doc is not None:
+                documents.extend(self._chunk_email_doc(doc))
 
         if not documents:
             return [], []

@@ -10,6 +10,8 @@ import email as email_lib
 import json
 from io import BytesIO
 
+from langchain_core.documents import Document
+
 from src.ingestion.email_processor import (
     EmailProcessor,
     _extract_thread_id,
@@ -130,6 +132,60 @@ def test_extract_thread_id_falls_back_to_message_id():
     raw = "From: a@b.com\nMessage-ID: <standalone@mail.com>\n\nbody"
     msg = email_lib.message_from_string(raw)
     assert _extract_thread_id(msg) == "standalone@mail.com"
+
+
+# ---------------------------------------------------------------------------
+# EmailProcessor semantic chunking
+# ---------------------------------------------------------------------------
+
+LONG_EML = """\
+From: alice@lawfirm.com
+To: bob@corp.com
+Subject: Detailed Contract Terms
+Message-ID: <long-001@lawfirm.com>
+Date: Mon, 01 Jan 2024 10:00:00 +0000
+Content-Type: text/plain; charset=utf-8
+
+{body}
+"""
+
+MULTI_TOPIC_BODY = """\
+The indemnification clause requires each party to hold the other harmless from \
+any third-party claims arising out of the performance of this agreement. \
+Indemnification obligations survive the termination of this contract for a period of five years.
+
+Payment terms stipulate that all invoices are due within thirty days of receipt. \
+Late payments shall accrue interest at a rate of one point five percent per month. \
+Wire transfer details are provided in Schedule B attached hereto.
+
+Governing law for this agreement shall be the State of New York. \
+Any disputes shall be resolved exclusively through binding arbitration under AAA rules. \
+The prevailing party shall be entitled to recover reasonable legal fees and costs.
+"""
+
+
+def test_email_processor_chunks_are_documents(tmp_path, mock_embedding_service):
+    eml_file = tmp_path / "multi.eml"
+    eml_file.write_text(LONG_EML.format(body=MULTI_TOPIC_BODY))
+    docs, embeddings = EmailProcessor(mock_embedding_service).process(str(eml_file))
+    assert all(isinstance(d, Document) for d in docs)
+    assert len(docs) == len(embeddings)
+
+
+def test_email_processor_chunks_preserve_metadata(tmp_path, mock_embedding_service):
+    eml_file = tmp_path / "multi.eml"
+    eml_file.write_text(LONG_EML.format(body=MULTI_TOPIC_BODY))
+    docs, _ = EmailProcessor(mock_embedding_service).process(str(eml_file))
+    for doc in docs:
+        assert doc.metadata["sender"] == "alice@lawfirm.com"
+        assert doc.metadata["subject"] == "Detailed Contract Terms"
+
+
+def test_email_processor_no_empty_chunks(tmp_path, mock_embedding_service):
+    eml_file = tmp_path / "multi.eml"
+    eml_file.write_text(LONG_EML.format(body=MULTI_TOPIC_BODY))
+    docs, _ = EmailProcessor(mock_embedding_service).process(str(eml_file))
+    assert all(d.page_content.strip() for d in docs)
 
 
 # ---------------------------------------------------------------------------

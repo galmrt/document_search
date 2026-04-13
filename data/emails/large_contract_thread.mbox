@@ -1,0 +1,115 @@
+From sarah.chen@acquisitions.com Mon Apr 07 09:14:00 2026
+From: sarah.chen@acquisitions.com
+To: james.whitfield@legalcorp.com
+Cc: review@legalcorp.com
+Subject: Re: Master Services Agreement - Final Redline v4 - Urgent Comments Before Thursday Signing
+Message-ID: <large-test-001@acquisitions.com>
+In-Reply-To: <large-test-000@legalcorp.com>
+References: <large-test-000@legalcorp.com>
+Date: Mon, 07 Apr 2026 09:14:00 +0000
+Content-Type: text/plain; charset=utf-8
+
+James,
+
+Following our call on Friday I have gone through the entire redline in detail and have a number of substantive comments that need to be addressed before we can sign on Thursday. Please treat this as our formal written objection to several provisions and circulate to your team accordingly.
+
+SECTION 3 - SCOPE OF SERVICES
+
+The current draft defines the scope of services by reference to Schedule A, which has not been finalised. We cannot execute an agreement where the core commercial obligation is left to a document that does not yet exist in agreed form. We require Schedule A to be attached in final form as a condition of signing. If your client is unwilling to commit to a defined scope now, we would prefer to postpone the execution date rather than sign a blank cheque.
+
+Additionally, Section 3.4 grants your client unilateral discretion to modify the method of delivery of services provided that the overall quality of the services is not materially diminished. This standard is entirely subjective and unenforceable as drafted. We propose replacing it with an objective benchmark: delivery method changes must not result in a measurable increase in error rates, processing times, or client-reported incidents above the baseline established in Schedule B. If your client has genuine operational flexibility needs here, we are open to discussing a change control procedure instead.
+
+SECTION 7 - FEES AND PAYMENT TERMS
+
+We have three issues with this section. First, the automatic annual price escalation clause in Section 7.3 ties increases to CPI without a cap. In the current inflationary environment this is commercially unacceptable. We are prepared to accept CPI-linked increases subject to a hard cap of three percent per annum. Any increase above that threshold requires mutual written agreement.
+
+Second, Section 7.5 imposes a late payment charge of two percent per month on overdue invoices. This is punitive and likely unenforceable in several jurisdictions where we operate. Industry standard is one percent per month or base rate plus eight percent per annum, whichever is lower. We ask that you revise accordingly.
+
+Third, the payment terms in Section 7.1 require payment within fifteen days of invoice. Our standard payment terms are thirty days and our accounts payable system is configured accordingly. Processing payments in fifteen days would require us to create a manual exception workflow solely for this contract, which we are not prepared to do. Please revert to thirty days net.
+
+SECTION 11 - LIMITATION OF LIABILITY
+
+This section as drafted is the most significant issue and the one most likely to prevent execution by Thursday if not resolved.
+
+Section 11.2 caps your client aggregate liability at an amount equal to fees paid in the preceding three months. For a services agreement of this nature and value, a three-month cap is wholly inadequate. Our standard position is a cap equivalent to twelve months of fees, and we would consider a negotiated figure of six months as a compromise. Anything below that is a non-starter for our risk committee.
+
+Section 11.3 excludes consequential losses in extremely broad terms, including loss of profits, loss of data, loss of business, and reputational damage. We have no objection to excluding speculative consequential losses, but we require carve-outs for: losses arising from your client breach of confidentiality obligations; losses arising from data breaches caused by your client negligence or wilful misconduct; and losses arising from your client infringement of third-party intellectual property rights. These are not speculative and should sit outside the exclusion clause.
+
+SECTION 14 - INTELLECTUAL PROPERTY
+
+Section 14.1 vests ownership of all work product created under this agreement in your client. This is completely unacceptable where the work product in question is developed specifically for us, using our proprietary data, systems, and know-how. Any bespoke deliverable developed exclusively for our use must vest in us upon payment. We are prepared to grant your client a licence to use such materials for the purpose of delivering other components of the services, but ownership must reside with us.
+
+Section 14.3 contains a broad licence from us to your client to use our data for the purpose of service delivery. We accept the need for this licence in principle but require the following limitations: the licence must be non-transferable and non-sublicensable without our prior written consent; your client must not use our data to train or improve any machine learning model or algorithm without our express written consent in each instance; your client must delete all copies of our data within thirty days of contract termination.
+
+SECTION 17 - TERMINATION
+
+Section 17.2 permits termination for convenience by either party on ninety days notice. We are satisfied with ninety days. However, Section 17.4 provides that upon termination for convenience by us, we must pay a termination fee equal to six months of fees. This is disproportionate and in effect eliminates our right to terminate for convenience by imposing a financial penalty that would deter any commercially rational party from exercising that right. We require the termination fee to be removed entirely, or at minimum reduced to a genuine reimbursement of documented wind-down costs capped at one month of fees.
+
+Section 17.6 sets out the consequences of termination but does not adequately address data return and destruction. We require a provision obligating your client to return all of our data in a machine-readable format within fifteen days of termination and to provide written certification of destruction of all copies within thirty days.
+
+SECTION 19 - GOVERNING LAW AND DISPUTES
+
+We note that Section 19.1 specifies English law as governing law and the courts of England and Wales as having exclusive jurisdiction. We have no objection to English law. However, we do object to exclusive jurisdiction given that the majority of our operations and the services themselves will be delivered across Europe and North America. We propose non-exclusive jurisdiction in England, with both parties retaining the right to seek interim injunctive relief in any competent court.
+
+We also note the absence of a mandatory mediation step before litigation. Our standard position is to require a thirty-day mediation period before either party may commence court proceedings, other than for applications for urgent injunctive relief. Please add this.
+
+We are available for a call Tuesday or Wednesday this week to work through these points. Please come back to us by end of Monday with your client position on the liability cap and IP ownership issues as those are the two points where we anticipate the most difficulty.
+
+Best regards,
+Sarah Chen
+Senior Legal Counsel
+
+From james.whitfield@legalcorp.com Mon Apr 07 14:30:00 2026
+From: james.whitfield@legalcorp.com
+To: sarah.chen@acquisitions.com
+Cc: review@legalcorp.com
+Subject: Re: Master Services Agreement - Final Redline v4 - Urgent Comments Before Thursday Signing
+Message-ID: <large-test-002@legalcorp.com>
+In-Reply-To: <large-test-001@acquisitions.com>
+References: <large-test-000@legalcorp.com> <large-test-001@acquisitions.com>
+Date: Mon, 07 Apr 2026 14:30:00 +0000
+Content-Type: text/plain; charset=utf-8
+
+Sarah,
+
+Thank you for the detailed comments. I have taken instructions from my client and can respond as follows.
+
+On the liability cap: my client is prepared to move from three months to four months of fees as their final position. They are not able to accept six months given the overall contract value and the risk profile of the services being delivered. This is a firm position and escalating it further will not change the outcome.
+
+On intellectual property: my client accepts that bespoke deliverables developed exclusively using your data and specifications should vest in your client upon full payment. They require a perpetual, royalty-free licence back to use those deliverables for internal benchmarking purposes only. The data usage restrictions you propose in Section 14.3 are acceptable with one amendment: the thirty-day deletion obligation upon termination should be extended to sixty days to allow for orderly system decommissioning.
+
+On payment terms: my client agrees to thirty days net. On the late payment rate: my client will accept one and a half percent per month as a compromise.
+
+On the CPI cap: my client accepts a cap of four percent per annum rather than three. This reflects their own cost base exposure and is the minimum they can accept.
+
+On governing law: my client agrees to non-exclusive jurisdiction. They do not agree to a mandatory mediation step given previous experience with mediation causing delay in time-sensitive disputes. They propose instead a mandatory senior executive escalation period of fifteen business days before either party may issue proceedings.
+
+The remaining points you raise regarding Schedule A, Section 3.4, termination fees, and data return are being reviewed and we will revert by close of business tomorrow.
+
+We are available Wednesday afternoon for a call.
+
+James Whitfield
+Partner, Commercial Disputes
+james.whitfield@legalcorp.com
+
+From sarah.chen@acquisitions.com Tue Apr 08 10:00:00 2026
+From: sarah.chen@acquisitions.com
+To: james.whitfield@legalcorp.com
+Subject: Re: Master Services Agreement - Final Redline v4 - Urgent Comments Before Thursday Signing
+Message-ID: <large-test-003@acquisitions.com>
+In-Reply-To: <large-test-002@legalcorp.com>
+References: <large-test-000@legalcorp.com> <large-test-001@acquisitions.com> <large-test-002@legalcorp.com>
+Date: Tue, 08 Apr 2026 10:00:00 +0000
+Content-Type: text/plain; charset=utf-8
+
+James,
+
+Noted on the liability cap. Four months is not acceptable. We will accept five months as our final position. If your client cannot meet that, we should discuss whether Thursday remains a realistic signing date.
+
+The IP position and data deletion extension to sixty days are acceptable. Please reflect in the next draft.
+
+The senior executive escalation proposal is workable provided the fifteen business days runs from the date of written notice of dispute and does not restart if personnel change during the escalation period. Please confirm.
+
+We await your revert on the remaining open items by close of business today as agreed.
+
+Sarah

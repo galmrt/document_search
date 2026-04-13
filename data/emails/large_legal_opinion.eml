@@ -1,0 +1,58 @@
+From: david.morrison@morrisonlaw.com
+To: patricia.huang@globalcorp.com
+CC: legal-team@globalcorp.com
+Date: Tue, 08 Apr 2025 14:30:00 +0000
+Subject: Comprehensive Legal Opinion - GlobalCorp Asset Acquisition from Nexus Holdings
+Message-ID: <opinion-globalcorp-nexus-20250408@morrisonlaw.com>
+
+Dear Patricia,
+
+Further to our engagement letter dated 15 March 2025 and our subsequent discussions, I am pleased to provide you with our comprehensive legal opinion regarding GlobalCorp's proposed acquisition of substantially all of the assets of Nexus Holdings Ltd (the "Transaction"). This opinion should be read in conjunction with the due diligence reports prepared by our corporate, tax, and employment teams, all of which are appended as exhibits to this letter.
+
+BACKGROUND AND SCOPE
+
+GlobalCorp International Inc. ("GlobalCorp" or the "Purchaser") intends to acquire the business assets, intellectual property portfolio, customer contracts, and associated goodwill of Nexus Holdings Ltd ("Nexus" or the "Target") for a total consideration of USD 47,500,000 (forty-seven million five hundred thousand United States dollars), subject to customary working capital adjustments at closing. The Transaction is structured as an asset purchase rather than a share acquisition, principally to allow GlobalCorp to benefit from a stepped-up cost basis on the acquired assets and to avoid inheriting contingent liabilities that remain with the Target corporate entity post-closing.
+
+Our engagement covers: (i) review of the Asset Purchase Agreement dated 02 April 2025 (the "APA") and all ancillary transaction documents; (ii) assessment of material contracts assigned or novated in connection with the Transaction; (iii) review of regulatory filings and consents required to consummate the Transaction; (iv) analysis of outstanding litigation and regulatory investigations disclosed by the Target; and (v) identification of material risks and recommended protective provisions.
+
+MATERIAL CONTRACTS AND ASSIGNMENT
+
+We have reviewed the 74 customer contracts identified in Schedule 2.1(b) of the APA, representing approximately 91% of the Target's annualised recurring revenue of USD 38,200,000. Of these, 61 contracts contain express assignment provisions requiring counterparty consent prior to any transfer. We have been advised that consent has been obtained or is in the process of being obtained for 54 of those contracts. The remaining 7 contracts — representing combined annual contract value of approximately USD 4,100,000 — are held by counterparties that have either declined to respond or indicated reluctance to consent.
+
+We strongly recommend that the parties negotiate a specific indemnity from the Seller covering any revenue shortfall attributable to the loss of these 7 contracts within the 18-month period following closing. Additionally, a portion of the deferred consideration (currently proposed at USD 8,000,000 payable 12 months post-closing) should be made contingent on the successful novation or re-execution of these contracts under GlobalCorp's name. The current APA drafting does not provide adequate protection in this regard and should be revised before execution.
+
+INTELLECTUAL PROPERTY
+
+The Target's IP portfolio consists of 12 registered patents (8 granted, 4 pending), 23 registered trademarks across 14 jurisdictions, 3 copyright registrations, and approximately 200 GB of proprietary source code and technical documentation. Schedule 2.1(c) of the APA purports to transfer all IP assets, however we have identified the following concerns that require resolution prior to closing.
+
+First, Patent No. US 11,234,567 B2 (filed 2019, granted 2022) relating to the Target's core data processing algorithm is the subject of an inter partes review petition filed by Clearstream Technologies Corp in January 2025. The USPTO has not yet decided whether to institute review. If instituted, there is meaningful risk that one or more claims of this patent could be cancelled, which would materially affect the competitive differentiation of the acquired technology. We recommend that GlobalCorp's technical team conduct an independent freedom-to-operate analysis, and that the parties negotiate a price adjustment mechanism or escrow arrangement contingent on the outcome of the USPTO proceedings.
+
+Second, three of the pending trademark applications in the European Union (Application Nos. 018456789, 018456790, and 018456791) are opposed by a German competitor, Technik GmbH, on relative grounds. Opposition proceedings are ongoing before the EUIPO. GlobalCorp should be prepared either to settle the oppositions by entering into a coexistence agreement or to litigate the matter before the EUIPO Board of Appeal and potentially the General Court of the European Union. Estimated legal costs for the litigation track are EUR 180,000 to EUR 350,000, and proceedings could take 3 to 5 years to conclude.
+
+Third, we have identified 14 instances in the disclosed source code where third-party open source components are used under licenses that impose copyleft conditions (specifically LGPL v2.1 and GPL v3.0). Depending on how GlobalCorp intends to integrate and distribute the acquired software, these licensing terms could require disclosure of GlobalCorp's proprietary modifications. We recommend a full open source license compliance audit prior to closing and inclusion of appropriate representations and warranties in the APA requiring the Seller to certify compliance with all applicable open source license obligations.
+
+REGULATORY MATTERS
+
+The Transaction is subject to mandatory pre-closing notification under the Hart-Scott-Rodino Antitrust Improvements Act of 1976, as the parties' combined revenues exceed the applicable jurisdictional thresholds. The HSR filing fee at the applicable bracket is USD 280,000. Based on the market data reviewed, we do not anticipate substantive antitrust concerns given that GlobalCorp and Nexus operate in adjacent but not directly competing markets. However, the waiting period (typically 30 days, extendable upon issuance of a Second Request) should be factored into the proposed closing timeline of 15 June 2025.
+
+In addition, Nexus holds three state-issued licenses for the provision of cloud-based financial data services in New York, California, and Texas. Transfer or reissuance of these licenses requires prior approval from the respective state financial regulators. The New York Department of Financial Services has historically taken 60 to 90 days to process such applications. We recommend filing the regulatory applications immediately upon signing the APA and including a closing condition that all three licenses have been reissued or transferred to GlobalCorp prior to closing. The current APA includes this as a covenant but not a closing condition, which we view as insufficient.
+
+LITIGATION AND CONTINGENT LIABILITIES
+
+The Target has disclosed 4 active litigation matters. Of these, two are employment disputes (one wage-and-hour class action in California and one individual wrongful termination claim in New York) which we assess carry aggregate exposure in the range of USD 800,000 to USD 2,400,000. A specific indemnity for these matters has been negotiated and is reflected in Section 9.2(d) of the current APA draft. The remaining two matters are commercial contract disputes with former reseller partners; combined exposure is estimated at USD 450,000, and both matters are at early stages with good prospects for resolution.
+
+We have also identified through our review of regulatory correspondence that the Target received a Civil Investigative Demand from the FTC in November 2024 relating to the Target's data sharing practices with advertising partners. The Target has responded to the CID but the investigation remains open. This matter was not included in the Seller's initial disclosure schedules and came to our attention only through review of email correspondence in the data room. We have requested that the Seller provide a complete supplemental disclosure and that a specific indemnity of unlimited duration and uncapped amount be negotiated for this regulatory matter given the potential severity of FTC enforcement actions.
+
+RECOMMENDATIONS AND NEXT STEPS
+
+In summary, we recommend that GlobalCorp not proceed to closing under the current form of the APA without the following amendments: (1) a contract assignment shortfall indemnity and deferred consideration adjustment for the 7 non-consenting counterparties; (2) a price adjustment or escrow mechanism linked to the outcome of the USPTO inter partes review; (3) open source compliance representations and pre-closing audit obligations; (4) elevation of the regulatory license transfer to a closing condition; and (5) an uncapped, unlimited indemnity for the FTC investigation matter.
+
+We are available to discuss these recommendations at your convenience and can provide revised APA markup within 3 business days of receiving your instructions. Please do not hesitate to contact me directly on +1 (212) 555-0147 or by reply to this email.
+
+Yours sincerely,
+
+David Morrison
+Partner, Morrison & Webb LLP
+One Liberty Plaza, New York, NY 10006
+T: +1 (212) 555-0147
+E: david.morrison@morrisonlaw.com

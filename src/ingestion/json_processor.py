@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 from src.utils.embedding_service import EmbeddingService
 from src.utils import schema_analyzer
 
-CONTENT_MIN_WORDS = 10
+CONTENT_MIN_WORDS = 4
 CHUNK_SIZE = 400
 CHUNK_OVERLAP = 50
 
@@ -58,8 +58,7 @@ def _flatten(obj, key: str = "", content_parts: list = None, metadata: dict = No
 
     elif isinstance(obj, str) and obj.strip():
         if len(obj.split()) >= CONTENT_MIN_WORDS:
-            label = key if key else "text"
-            content_parts.append(f"{label}: {obj.strip()}")
+            content_parts.append(obj.strip())
         else:
             if key:
                 metadata[key] = obj
@@ -134,10 +133,12 @@ class JSONProcessor:
         if not records:
             return [], []
 
+        metadata_keys: set = set()
         if len(records) == 1 or schema_analyzer.consistent_structure(records[0], records[1]):
             schema = schema_analyzer.analyze(records[0])
             if schema:
                 skip_keys = set(schema.get("skip_keys", []))
+                metadata_keys = set(schema.get("metadata_keys", []))
         else:
             logger.info("Variable record structure detected, skipping LLM schema analysis")
 
@@ -146,13 +147,14 @@ class JSONProcessor:
 
         for record in ijson.items(file_obj, "item"):
             cleaned = _strip_keys(record, skip_keys) if skip_keys else record
-            content_parts, _ = _flatten(cleaned)
+            content_parts, meta = _flatten(cleaned)
             if not content_parts:
                 continue
+            json_meta = {k: v for k, v in meta.items() if k in metadata_keys} if metadata_keys else meta
             for chunk_text in _chunk_text(content_parts):
                 all_docs.append(Document(
                     page_content=chunk_text,
-                    metadata={"file_name": filename},
+                    metadata={"file_name": filename, "json_metadata": json_meta},
                 ))
 
         if not all_docs:
@@ -176,23 +178,27 @@ class JSONProcessor:
                 break
 
         skip_keys: set = set()
+        metadata_keys: set = set()
         if sample:
             schema = schema_analyzer.analyze(sample)
             if schema:
                 skip_keys = set(schema.get("skip_keys", []))
+                metadata_keys = set(schema.get("metadata_keys", []))
 
         # Stream all key-value pairs for actual content extraction
         content_parts: list[str] = []
+        meta: dict = {}
         file_obj.seek(0)
         for key, value in ijson.kvitems(file_obj, ""):
             if key not in skip_keys:
-                _flatten(value, key, content_parts, {})
+                _flatten(value, key, content_parts, meta)
 
         if not content_parts:
             return [], []
 
+        json_meta = {k: v for k, v in meta.items() if k in metadata_keys} if metadata_keys else meta
         docs = [
-            Document(page_content=chunk_text, metadata={"file_name": filename})
+            Document(page_content=chunk_text, metadata={"file_name": filename, "json_metadata": json_meta})
             for chunk_text in _chunk_text(content_parts)
         ]
         embeddings = self.embedding_service.encode([d.page_content for d in docs])
