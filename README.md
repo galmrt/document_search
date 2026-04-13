@@ -1,6 +1,8 @@
-# Altumatim — Legal Document Search
+# Legal Document Search
 
-Hybrid semantic + keyword search over large legal document corpora. Built for ~2 million documents (PDFs, emails, JSON compliance exports) with sub-5-second query response.
+A prototype for hybrid semantic + keyword search over large legal document corpora (PDFs, emails, JSON compliance exports). Designed to scale — see the scaling section below.
+
+**Loom video demonstration: link **
 
 ---
 
@@ -71,7 +73,7 @@ A `.env` file is not required — all settings have working defaults. Copy `.env
 
 **SHA-256 for deduplication** — file identity is the hash of raw bytes. Re-uploading an identical file is a no-op. Same filename + different content increments a version counter.
 
-**Local embeddings over API** — `sentence-transformers` runs on CPU with no per-token cost. Slower at ingestion time than an API but free and offline. At 2M documents the cost difference is significant.
+**Local embeddings over API** — `sentence-transformers` runs on CPU with no per-token cost. Slower at ingestion time than an API but free and offline. At scale the cost difference becomes significant.
 
 ---
 
