@@ -4,7 +4,7 @@ import streamlit as st
 API_URL = "http://localhost:8000"
 
 st.set_page_config(page_title="Altumatim Search", layout="wide")
-st.title("Altumatim Legal Document Search")
+st.title("Legal Document Search")
 
 with st.sidebar:
     st.header("Upload Documents")
