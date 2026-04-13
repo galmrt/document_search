@@ -41,14 +41,12 @@ venv.bak/
 .env.local
 .env.*.local
 
-# Data files (don't commit large files)
+# Data files
+data/.DS_Store
+data/emails/Altumatim.mbox
+data/native-pdf/Technical Coding Assignment Python Developer.pdf
 *.docx
 *.xlsx
-data/*
-!data/.gitkeep
-!data/sample_contracts/.gitkeep
-!data/sample_emails/.gitkeep
-!data/sample_compliance/.gitkeep
 
 # Model files
 *.pkl
