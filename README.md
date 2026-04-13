@@ -2,7 +2,7 @@
 
 A prototype for hybrid semantic + keyword search over large legal document corpora (PDFs, emails, JSON compliance exports). Designed to scale — see the scaling section below.
 
-**Loom video demonstration: link **
+**Loom video demonstration: link**
 
 ---
 
