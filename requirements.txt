@@ -3,7 +3,6 @@ fastapi==0.110.0
 uvicorn[standard]==0.27.1
 python-multipart==0.0.9
 pydantic==2.6.1
-pydantic-settings==2.2.1
 python-dotenv==1.0.1
 
 # Elasticsearch
@@ -17,19 +16,14 @@ sentence-transformers==2.5.1
 torch==2.2.1
 transformers==4.38.1
 
-# Document Processing - PDF
+# Document Processing
 docling
-pdf2image==1.17.0
 Pillow==10.2.0
+ijson==3.5.0
 
-# Document Processing - Other
-pandas==2.2.1
-
-# Utilities
-tqdm==4.66.2
-python-dateutil==2.9.0
+# UI
+streamlit==1.56.0
+requests==2.33.1
 
 # Testing
 pytest==8.1.1
-pytest-asyncio==0.23.5
-httpx==0.27.0

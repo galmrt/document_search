@@ -11,5 +11,8 @@ class EmbeddingService:
     def encode(self, texts: list[str]) -> list[list[float]]:
         return self.model.encode(texts).tolist()
 
+    def encode_one(self, text: str) -> list[float]:
+        return self.model.encode([text]).tolist()[0]
+
     def encode_query(self, text: str) -> list[float]:
         return self.model.encode([_QUERY_PREFIX + text]).tolist()[0]

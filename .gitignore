@@ -42,7 +42,6 @@ venv.bak/
 .env.*.local
 
 # Data files (don't commit large files)
-*.pdf
 *.docx
 *.xlsx
 data/*
