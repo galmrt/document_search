@@ -34,17 +34,18 @@ with st.sidebar:
                 st.error(f"Upload failed: {resp.text}")
 
 
-query = st.text_input("Ask a question or search for a clause", placeholder="e.g. termination clause notice period")
+col1, col2, col3 = st.columns([4, 1, 1])
+with col1:
+    query = st.text_input("Ask a question or search for a clause", placeholder="e.g. termination clause notice period")
+with col2:
+    doc_type_filter = st.selectbox("Document type", ["All", "PDF", "Email", "JSON"], index=0)
+with col3:
+    top_k = st.selectbox("Top K results", [3, 5, 10], index=1)
+
+doc_type = doc_type_filter if doc_type_filter != "All" else None
 
 if query:
     st.subheader("Results")
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        top_k = st.selectbox("Results", [3, 5, 10], index=1)
-    with col2:
-        doc_type_filter = st.selectbox("Document type", ["All", "PDF", "Email", "JSON"], index=0)
-
-    doc_type = doc_type_filter if doc_type_filter != "All" else None
 
     with st.spinner("Searching…"):
         resp = requests.post(
@@ -71,9 +72,11 @@ if query:
                     sender = hit.get("sender", "—")
                     date = hit.get("email_date", "—")[:10] if hit.get("email_date") else "—"
                     label = f"Email: {subject}  ·  {sender}  ·  {date}"
-                else:
+                elif doc_type == "pdf":
                     page = hit.get("page_number", "—")
                     label = f"PDF: {file_name}  ·  page {page}"
+                else:
+                    label = f"JSON: {file_name}"
 
                 with st.expander(f"#{i}  {label}"):
                     st.caption(f"Source: `{file_name}`")
