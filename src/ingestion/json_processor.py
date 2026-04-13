@@ -1,4 +1,3 @@
-import json
 import logging
 import ijson
 from langchain_core.documents import Document
@@ -95,8 +94,10 @@ def _chunk_text(content_parts: list[str]) -> list[str]:
 
 def _detect_structure(file_obj) -> str:
     """Peeks at the first non-whitespace bytes to determine if the file is a
-    top-level array or object. Returns 'array' or 'object'."""
-    return "array" if file_obj.read(32).lstrip().startswith(b"[") else "object"
+    top-level array or object. Returns 'array' or 'object'. Seeks back to 0 after."""
+    header = file_obj.read(32)
+    file_obj.seek(0)
+    return "array" if header.lstrip().startswith(b"[") else "object"
 
 
 class JSONProcessor:
@@ -104,9 +105,7 @@ class JSONProcessor:
         self.embedding_service = embedding_service
 
     def process(self, file_obj, filename: str) -> tuple[list[Document], list[list[float]]]:
-        file_obj.seek(0)
-        structure = _detect_structure(file_obj)
-        file_obj.seek(0)
+        structure = _detect_structure(file_obj)  # seeks back to 0 internally
 
         if structure == "array":
             return self._process_array(file_obj, filename)
@@ -164,18 +163,30 @@ class JSONProcessor:
 
     def _process_object(self, file_obj, filename: str) -> tuple[list[Document], list[list[float]]]:
         """
-        Single document: optionally strips noisy keys via LLM schema analysis,
-        then flattens and chunks the remaining content.
+        Single document: streams top-level key-value pairs with ijson to avoid
+        loading the full file into memory. Samples the first 10 keys for LLM
+        schema analysis, then streams all keys for content extraction.
         """
+        # Collect a small sample for schema analysis without loading the whole file
         file_obj.seek(0)
-        data = json.load(file_obj)
+        sample: dict = {}
+        for key, value in ijson.kvitems(file_obj, ""):
+            sample[key] = value
+            if len(sample) >= 10:
+                break
 
-        schema = schema_analyzer.analyze(data)
-        if schema:
-            skip_keys = set(schema.get("skip_keys", []))
-            data = _strip_keys(data, skip_keys)
+        skip_keys: set = set()
+        if sample:
+            schema = schema_analyzer.analyze(sample)
+            if schema:
+                skip_keys = set(schema.get("skip_keys", []))
 
-        content_parts, _ = _flatten(data)
+        # Stream all key-value pairs for actual content extraction
+        content_parts: list[str] = []
+        file_obj.seek(0)
+        for key, value in ijson.kvitems(file_obj, ""):
+            if key not in skip_keys:
+                _flatten(value, key, content_parts, {})
 
         if not content_parts:
             return [], []
@@ -184,6 +195,5 @@ class JSONProcessor:
             Document(page_content=chunk_text, metadata={"file_name": filename})
             for chunk_text in _chunk_text(content_parts)
         ]
-
         embeddings = self.embedding_service.encode([d.page_content for d in docs])
         return docs, embeddings

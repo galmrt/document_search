@@ -35,10 +35,6 @@ with st.sidebar:
 
 
 query = st.text_input("Ask a question or search for a clause", placeholder="e.g. termination clause notice period")
-doc_search_filter = st.selectbox("Seach in following document types", ["All", "PDF", "Email", "JSON"], index=0)
-
-
-
 
 if query:
     st.subheader("Results")
@@ -47,17 +43,19 @@ if query:
         top_k = st.selectbox("Results", [3, 5, 10], index=1)
     with col2:
         doc_type_filter = st.selectbox("Document type", ["All", "PDF", "Email", "JSON"], index=0)
+
+    doc_type = doc_type_filter if doc_type_filter != "All" else None
+
     with st.spinner("Searching…"):
-        resp = requests.post(f"{API_URL}/query", params={"query": query, "size": top_k})
+        resp = requests.post(
+            f"{API_URL}/query",
+            json={"query": query, "size": top_k, "doc_type": doc_type},
+        )
 
     if not resp.ok:
         st.error(f"Search failed: {resp.text}")
     else:
         results = resp.json().get("results", [])
-
-        # client-side doc_type filter
-        if doc_type_filter != "All":
-            results = [r for r in results if r.get("doc_type", "").lower() == doc_type_filter.lower()]
 
         if not results:
             st.info("No results found.")

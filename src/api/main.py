@@ -1,9 +1,11 @@
+import asyncio
 import hashlib
 import os
 import tempfile
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, Request, UploadFile
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from docling.document_converter import DocumentConverter
@@ -16,22 +18,15 @@ from src.ingestion.json_processor import JSONProcessor
 
 load_dotenv()
 
-es_service: ESService = None
-embedding_service: EmbeddingService = None
-pdf_processor: PDFProcessor = None
-email_processor: EmailProcessor = None
-json_processor: JSONProcessor = None
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global es_service, embedding_service, pdf_processor, email_processor, json_processor
-    es_service = ESService(os.getenv("ELASTICSEARCH_URL", "http://localhost:9200"))
-    es_service.ensure_index()
-    embedding_service = EmbeddingService()
-    pdf_processor = PDFProcessor(DocumentConverter(), embedding_service)
-    email_processor = EmailProcessor(embedding_service)
-    json_processor = JSONProcessor(embedding_service)
+    app.state.es_service = ESService(os.getenv("ELASTICSEARCH_URL", "http://localhost:9200"))
+    await asyncio.to_thread(app.state.es_service.ensure_index)
+    app.state.embedding_service = EmbeddingService()
+    app.state.pdf_processor = PDFProcessor(DocumentConverter(), app.state.embedding_service)
+    app.state.email_processor = EmailProcessor(app.state.embedding_service)
+    app.state.json_processor = JSONProcessor(app.state.embedding_service)
     print("Services started")
     yield
 
@@ -39,22 +34,35 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+class QueryRequest(BaseModel):
+    query: str
+    size: int = 5
+    doc_type: str | None = None
+
+
 @app.post("/upload")
-async def upload_file(file: UploadFile):
+async def upload_file(file: UploadFile, request: Request):
+    es_service: ESService = request.app.state.es_service
+    pdf_processor: PDFProcessor = request.app.state.pdf_processor
+    email_processor: EmailProcessor = request.app.state.email_processor
+    json_processor: JSONProcessor = request.app.state.json_processor
+
     suffix = os.path.splitext(file.filename)[1].lower()
 
     if suffix == ".pdf":
         contents = await file.read()
         file_id = hashlib.sha256(contents).hexdigest()
-        if es_service.exists("file_id", file_id):
+        if await asyncio.to_thread(es_service.exists, "file_id", file_id):
             return {"filename": file.filename, "file_id": file_id, "status": "already_indexed"}
-        version = es_service.get_next_version(file.filename)
+        version = await asyncio.to_thread(es_service.get_next_version, file.filename)
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(contents)
             tmp_path = tmp.name
         try:
-            chunks, embeddings = pdf_processor.get_chunks(tmp_path)
-            es_service.index_chunks(file.filename, file_id, version, chunks, embeddings)
+            chunks, embeddings = await asyncio.to_thread(pdf_processor.get_chunks, tmp_path)
+            if not chunks:
+                return {"filename": file.filename, "error": "No text could be extracted from this PDF"}
+            await asyncio.to_thread(es_service.index_chunks, file.filename, file_id, version, chunks, embeddings)
         finally:
             os.unlink(tmp_path)
         return {"filename": file.filename, "file_id": file_id, "version": version, "chunks_indexed": len(chunks)}
@@ -66,8 +74,10 @@ async def upload_file(file: UploadFile):
             tmp.write(contents)
             tmp_path = tmp.name
         try:
-            chunks, embeddings = email_processor.process(tmp_path)
-            indexed = es_service.index_emails(file.filename, file_id, chunks, embeddings)
+            chunks, embeddings = await asyncio.to_thread(email_processor.process, tmp_path)
+            if not chunks:
+                return {"filename": file.filename, "error": "No emails with extractable text found in this file"}
+            indexed = await asyncio.to_thread(es_service.index_emails, file.filename, file_id, chunks, embeddings)
         finally:
             os.unlink(tmp_path)
         return {"filename": file.filename, "emails_indexed": indexed}
@@ -77,12 +87,14 @@ async def upload_file(file: UploadFile):
         while chunk := await file.read(8192):
             hasher.update(chunk)
         file_id = hasher.hexdigest()
-        if es_service.exists("file_id", file_id):
+        if await asyncio.to_thread(es_service.exists, "file_id", file_id):
             return {"filename": file.filename, "file_id": file_id, "status": "already_indexed"}
         file.file.seek(0)
-        version = es_service.get_next_version(file.filename)
-        chunks, embeddings = json_processor.process(file.file, file.filename)
-        es_service.index_chunks(file.filename, file_id, version, chunks, embeddings, doc_type="json")
+        version = await asyncio.to_thread(es_service.get_next_version, file.filename)
+        chunks, embeddings = await asyncio.to_thread(json_processor.process, file.file, file.filename)
+        if not chunks:
+            return {"filename": file.filename, "error": "No indexable text content found in this JSON file"}
+        await asyncio.to_thread(es_service.index_chunks, file.filename, file_id, version, chunks, embeddings, "json")
         return {"filename": file.filename, "file_id": file_id, "version": version, "chunks_indexed": len(chunks)}
 
     else:
@@ -90,7 +102,10 @@ async def upload_file(file: UploadFile):
 
 
 @app.post("/query")
-async def query(query: str, size: int = 5):
-    query_embedding = embedding_service.encode_one(query)
-    results = es_service.search(query, query_embedding, size=size)
+async def query(body: QueryRequest, request: Request):
+    es_service: ESService = request.app.state.es_service
+    embedding_service: EmbeddingService = request.app.state.embedding_service
+
+    query_embedding = await asyncio.to_thread(embedding_service.encode_query, body.query)
+    results = await asyncio.to_thread(es_service.search, body.query, query_embedding, body.size, body.doc_type)
     return {"results": results}

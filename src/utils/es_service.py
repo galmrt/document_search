@@ -73,15 +73,14 @@ class ESService:
                     "@timestamp": timestamp,
                     "content": chunk.page_content,
                     "embedding": embedding,
-                    "email_id": meta["email_id"],
-                    "thread_id": meta["thread_id"],
-                    "sender": meta["sender"],
-                    "email_date": meta["email_date"],
-                    "subject": meta["subject"],
+                    "email_id": chunk.metadata["email_id"],
+                    "thread_id": chunk.metadata["thread_id"],
+                    "sender": chunk.metadata["sender"],
+                    "email_date": chunk.metadata["email_date"],
+                    "subject": chunk.metadata["subject"],
                 },
             }
             for chunk, embedding in zip(chunks, embeddings)
-            if not self.exists("email_id", (meta := chunk.metadata)["email_id"])
         ]
         indexed_count, errors = bulk(self.es, actions, raise_on_error=False)
         if errors:
@@ -89,25 +88,36 @@ class ESService:
         self.logger.info(f"Indexed {indexed_count} emails from {filename}")
         return indexed_count
 
-    def search(self, query_text: str, query_embedding: list[float], size: int = 5):
+    def search(self, query_text: str, query_embedding: list[float], size: int = 5, doc_type: str | None = None):
         fields = ["content", "file_name", "doc_type", "page_number", "sender", "subject", "email_date"]
         fetch_size = max(size * 4, 20)
 
+        doc_type_filter = {"term": {"doc_type": doc_type.lower()}} if doc_type else None
+
+        bm25_query = (
+            {"bool": {"must": {"match": {"content": query_text}}, "filter": doc_type_filter}}
+            if doc_type_filter
+            else {"match": {"content": query_text}}
+        )
+        knn_body = {
+            "field": "embedding",
+            "query_vector": query_embedding,
+            "k": fetch_size,
+            "num_candidates": 100,
+        }
+        if doc_type_filter:
+            knn_body["filter"] = doc_type_filter
+
         bm25_resp = self.es.search(
             index=INDEX_NAME,
-            query={"match": {"content": query_text}},
+            query=bm25_query,
             source=False,
             fields=fields,
             size=fetch_size,
         )
         knn_resp = self.es.search(
             index=INDEX_NAME,
-            knn={
-                "field": "embedding",
-                "query_vector": query_embedding,
-                "k": fetch_size,
-                "num_candidates": 100,
-            },
+            knn=knn_body,
             source=False,
             fields=fields,
             size=fetch_size,
