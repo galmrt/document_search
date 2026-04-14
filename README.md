@@ -37,9 +37,9 @@ A `.env` file is not required — all settings have working defaults. Copy `.env
 
 - **PDFs**: Docling extracts structured text (headings, tables, sections). HybridChunker splits on document structure rather than character counts, with 200-char sentence-boundary overlap within sections.
 - **Emails**: Python stdlib parses `.eml` and `.mbox`. Quoted reply content is stripped so only new content is embedded. Thread IDs reconstructed from `References` / `In-Reply-To` headers.
-- **JSON**: `ijson` streams large files without loading them into memory. Fields are classified at ingestion time — strings ≥10 words go into the searchable content field; short strings, numbers, and booleans are stored as filterable metadata. A local Ollama LLM (`llama3.2:3b`) optionally identifies noise keys (UUIDs, policy definitions) to skip before indexing.
+- **JSON**: `ijson` streams large files without loading them into memory. Fields are classified at ingestion time — strings ≥4 words go into the searchable `content` field (value only, no label prefix); short strings, numbers, and booleans are stored in `json_metadata` (ES `flattened` type) for structured filtering. A local Ollama LLM (`llama3.2:3b`) optionally identifies noise keys to skip (`skip_keys`) and structured fields to index as metadata (`metadata_keys`).
 
-**Search** — hybrid BM25 + KNN with manual Reciprocal Rank Fusion (RRF). Two ES queries are issued and merged in Python using `score += 1 / (60 + rank)`. Query embeddings use the BGE instruction prefix (`"Represent this sentence for searching relevant passages: "`) for asymmetric retrieval. Results are filterable by document type server-side on both the BM25 and KNN queries.
+**Search** — hybrid BM25 + KNN with manual Reciprocal Rank Fusion (RRF). Two ES queries are issued and merged in Python using `score += 1 / (60 + rank)`. BM25 uses `multi_match` across `content` and `subject^2` (subject boosted for email relevance). Query embeddings use the BGE instruction prefix (`"Represent this sentence for searching relevant passages: "`) for asymmetric retrieval. Results are filterable by document type server-side on both the BM25 and KNN queries.
 
 **API** — FastAPI with lifespan-managed services on `app.state`. All blocking operations (Docling, embeddings, ES I/O) run in a thread pool via `asyncio.to_thread` to keep the event loop free.
 
@@ -56,7 +56,7 @@ A `.env` file is not required — all settings have working defaults. Copy `.env
 | XML / `.docx` ingestion | Not implemented in the time available. Architecture is the same — add a processor, register the suffix in the upload handler. |
 | ZIP bundle ingestion | Requires recursive dispatch; deferred to a later iteration. |
 | Access control | Placeholder field (`access_type`) exists in the ES mapping. Full implementation requires an auth layer (OAuth / LDAP) and per-query filter injection — out of scope for the prototype. |
-| Per-record metadata in JSON chunks | When JSON records are batched into multi-record chunks, individual record metadata is lost. Acceptable for now; fixable when the actual schema is known. |
+| Per-record metadata in JSON chunks | Structured short-value fields (status, framework, control_id) are now captured in `json_metadata` per chunk. Cross-record metadata (when multiple records land in one chunk) is merged — last-write wins for duplicate keys. |
 | Native ES RRF | Requires Platinum license. Manual Python RRF is used in dev. Swap to `rank: {rrf: {}}` in a single call on a licensed cluster. |
 
 ---

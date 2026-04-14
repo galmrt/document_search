@@ -157,11 +157,34 @@ Compliance JSON exports have an unknown schema — no sample files are available
 
 **Decision**: classify fields at ingestion time based on content length rather than a hardcoded schema.
 
-- **Content fields** (embedded + BM25 indexed): string fields where the value is ≥ 10 words. These drive semantic search. Stored as `"field_name: value"` concatenated into the chunk's `content` field.
-- **Metadata fields** (stored, not embedded): short strings, numbers, booleans, dates — anything that isn't substantive prose. Stored as individual fields on the ES document. ES dynamic mapping picks up the types automatically (no mapping change required).
+- **Content fields** (embedded + BM25 indexed): string fields where the value is ≥ 4 words. These drive semantic search. Only the value is stored in `content` — no label prefix.
+- **Metadata fields** (stored, not embedded): short strings, numbers, booleans — anything that isn't substantive prose. Stored in `json_metadata` (ES `flattened` type) and available for structured filtering (e.g. `json_metadata.status: NON_COMPLIANT`).
 
-**Threshold**: 10 words is a practical cut-off that separates IDs/codes/statuses from actual descriptive text. Adjustable if real files show different distributions.
+**Threshold**: 4 words. Originally 10 — raised from experience that short but meaningful phrases (titles, 4–5 words) were being dropped from content entirely, making them unsearchable.
 
-**Batching**: records are batched into ~400-word chunks before embedding to avoid near-empty vectors from short records. Per-record metadata is not preserved at the chunk level when batching — a known limitation. If records are large enough to be one-chunk-each, per-record metadata can be added to the Document metadata and passed through `index_chunks`.
+**Label prefix removed**: early implementation stored content as `"field_name: value"`. The label is noise in BM25 — users don't search for field names. Now only the value is indexed in `content`.
+
+**LLM schema analysis** (Ollama, optional): returns two lists — `skip_keys` (boilerplate/IDs to drop entirely) and `metadata_keys` (structured fields worth storing separately for filtering). Results are cached by top-level key fingerprint. Fallback to generic classification if Ollama is unavailable.
+
+**`json_metadata` ES field**: `flattened` type stores arbitrary key-value pairs without requiring a fixed schema. Enables per-field filtering without dynamic mapping explosion.
 
 **Production note**: once a schema is known, replace the adaptive classifier with explicit field mappings targeting the actual text and metadata fields for better embedding quality.
+
+# 04/14/2026
+
+## Indexing quality fixes
+
+Several issues identified and fixed after reviewing how documents were actually landing in ES.
+
+### JSON: label prefix stripped from content
+Content was stored as `"description: Multi-factor authentication..."`. The field name prefix pollutes BM25 — it scores hits on "description" as a term, which no user searches for. Changed to store only the value. Key names are either in `json_metadata` (structured fields) or implicit.
+
+### JSON: `json_metadata` flattened field for structured metadata
+Short-value fields (IDs, statuses, codes) were being discarded after `_flatten`. Now captured into `Document.metadata["json_metadata"]` and stored in ES under a `flattened` field. Enables `json_metadata.status: NON_COMPLIANT` style filters without a fixed schema. The Ollama LLM prompt updated to return `metadata_keys` alongside `skip_keys`.
+
+### Email: subject double-indexing removed
+Subject was prepended to the body text (`f"{subject}\n\n{clean_body}"`) and also stored as a dedicated `subject` field. This double-counts subject terms in BM25, inflating scores for subject-matching queries. Removed the prepend — subject lives only in its dedicated field. BM25 query updated to `multi_match` across `content` and `subject^2` so subject is still boosted at query time without inflating document-side term frequencies.
+
+### ES mapping corrections
+- `email_id` was missing from the mapping — ES was creating it dynamically as `text`. Added as `keyword`.
+- `subject` upgraded from `text`-only to a multi-field with a `keyword` sub-field, enabling exact-match filtering (e.g. find all emails with exact subject line).
